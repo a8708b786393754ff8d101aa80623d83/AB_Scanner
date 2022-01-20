@@ -5,7 +5,7 @@
 You must specify a target or a network with the subnet mask
 ### Type of scans: 
 ```
-    SYN, ICMP, UDP and ARP
+SYN, ICMP, UDP and ARP
 ```
 If you just put the target, the scanner script with all  types of scans:
 ```sh
