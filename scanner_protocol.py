@@ -1,14 +1,15 @@
-#!/usr/local/bin/python3.10
 import json
 import requests
 
-from scapy.all import TCP, IP, UDP, ICMP, sr
+from scapy.layers.inet import TCP, IP, UDP, ICMP
+from scapy.sendrecv import sr
+
+ports_tcp = []
+ports_udp = []
+name_port = []
+
 
 def get_protocole_name():
-    ports_tcp = []
-    ports_udp = []
-    name = []
-
     with open('port_protocol.json', 'r') as j_port:
         data = json.load(j_port)
 
@@ -22,91 +23,75 @@ def get_protocole_name():
                 port = element[0].split('/')
                 ports_udp.append(int(port[0]))
 
-            name.append(element[1]['name'])
-    return [ports_tcp, ports_udp, name]
+            name_port.append(element[1]['name'])
 
 
-class ScanPORT:
-    def __init__(self, tcp_port: list = None, udp_port: list = None, all_port=False):
-        self.tcp = tcp_port
-        self.udp = udp_port
-        self.all_port = all_port
+def state(ans, port: int):
+    for element in ans:
+        target = element[1][IP].src
 
-    def state(self, ans, port: int):
-        for element in ans:
-            target = element[1]['IP'].src
+        if element[1].haslayer(TCP):  # NOTE partie pour les packet SYN
+            element[1][TCP].show()
+            if element[1][TCP].flags == 'SA':
+                print(target, '--->', port, '::SYN', port)
 
-            if element[1].haslayer(TCP):  # partie pour les packet SYN
-                if element[1]['TCP'].flags == 'SA':
-                    print(target, '--->', port, '::SYN')
+                if port in [80, 443, 8080, 8000]:
+                    get_headers(element[1][IP].src, port)
 
-                    if port in [80, 443, 8080, 8000]:
-                        self.get_headers(element[1]['IP'].src, port)
+        # NOTE partie pour les packet UDP OU le scan tcp noel (je verifie le protocle icmp)
+        elif element[1].haslayer(ICMP):
+            if element[1][ICMP].type == 3 and element[1][ICMP].code in [1, 2, 9, 10, 13]:
+                print(target, '--->', port, '::SYN')
 
-            # partie pour les packet UDP OU le scan tcp noel (je verifie le protocle icmp)
-            elif element[1].haslayer(ICMP):
-                if element[1]['ICMP'].type == 3 and element[1]['ICMP'].code in [1, 2, 9, 10, 13]:
-                    print(target, '--->', port, '::SYN')
-
-            # pour voir si le packet continet une trame udp
-            elif element[1].haslayer(UDP):
-                port_udp_open = element[1]['UDP'].dport
-                print(target, '--->', port_udp_open, '::UDP')
-
-    def get_headers(self, target: str, port: int):
-        try:
-            if port == 443:
-                resp = requests.get(f'https://{target}/')
-            else:
-                resp = requests.get(f'http://{target}/')
-        except:
-            return None
-
-        if resp.ok:
-            print("*******************************")
-            for keys, values in resp.headers.items():
-                print(keys, ' : ', values)
-            print("*******************************")
-
-            return None
-
-        print('Il n ya pas de service web executer sur ce port')
+        # NOTE pour voir si le packet continet une trame udp
+        elif element[1].haslayer(UDP):
+            port_udp_open = element[1]['UDP'].dport
+            print(target, '--->', port_udp_open, '::UDP')
 
 
-class ScanTCP(ScanPORT):
-    def SYN(self, target: str):
-        pkt = IP(dst=target) / TCP(flags='S', sport=1234)
+def get_headers(target: str, port: int):
+    try:
+        if port == 443:
+            resp = requests.get(f'https://{target}/')
+        else:
+            resp = requests.get(f'http://{target}/')
+    except:
+        return None
 
-        for port in self.tcp:
-            port = int(port)
-            if self.all_port != True:
-                if port < 1023:
-                    pkt['TCP'].dport = port
-                    ans, _ = sr(pkt, verbose=0, timeout=1)
-                    self.state(ans, port)
+    if resp.ok:
+        print("*******************************")
+        for keys, values in resp.headers.items():
+            print(keys, ' : ', values)
+        print("*******************************")
 
-            else:
-                pkt['TCP'].dport = port
-                ans, _ = sr(pkt, verbose=0, timeout=1)
-                self.state(ans, port)
+        return None
 
-    # pas besoin de faire un scan ack, ce type de scan c'est pour savoir si le port est filtrer ou non
-    def ACK(self, target: str): pass
+    print('Il n ya pas de service web executer sur ce port')
 
 
-class ScanUDP(ScanPORT):
-    def run(self, target: str):
-        pkt = IP(dst=target) / UDP(sport=1234)
+def scan_syn(target: str, all_port: bool = True):
+    pkt = IP(dst=target) / TCP(flags='S', sport=1234)
 
-        for port in self.udp:
-            port = int(port)
-            if self.all_port != True:
-                if port < 1023:
-                    pkt['UDP'].dport = port
-                    ans, _ = sr(pkt, verbose=0, timeout=1)
-                    self.state(ans, port)
+    for port in ports_tcp:
+        port = int(port)
 
-            else:
-                pkt['UDP'].dport = port
-                ans, _ = sr(pkt, verbose=0, timeout=1)
-                self.state(ans, port)
+        if  not all_port and port == 1023:
+            return None 
+            
+        pkt[TCP].dport = port
+        ans, _ = sr(pkt, verbose=0, timeout=2)
+        state(ans, port)
+
+
+def scan_udp(target: str, all_port: bool = True):
+    pkt = IP(dst=target) / UDP(sport=1234)
+
+    for port in ports_udp:
+        port = int(port)
+
+        if not all_port and port == 1023:
+            return None 
+
+        pkt[UDP].dport = port
+        ans, _ = sr(pkt, verbose=0, timeout=2)
+        state(ans, port)
