@@ -9,7 +9,7 @@ ports_udp = []
 name_port = []
 
 
-def get_protocole_name():
+def set_protocole_name():
     with open('port_protocol.json', 'r') as j_port:
         data = json.load(j_port)
 
@@ -31,7 +31,6 @@ def state(ans, port: int):
         target = element[1][IP].src
 
         if element[1].haslayer(TCP):  # NOTE partie pour les packet SYN
-            element[1][TCP].show()
             if element[1][TCP].flags == 'SA':
                 print(target, '--->', port, '::SYN', port)
 

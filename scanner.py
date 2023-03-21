@@ -5,7 +5,7 @@ import ipaddress
 import logging
 
 from  scanner_host import scan_arp, scan_icmp
-from  scanner_protocol import scan_syn, scan_udp
+from  scanner_protocol import scan_syn, scan_udp, set_protocole_name
 
 logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 
@@ -16,6 +16,7 @@ if len(sys.argv) == 1:
 
 TARGET = sys.argv[1]
 start = time.time()
+set_protocole_name()
 
 if len(sys.argv) == 2:
     if '/' in TARGET: 
