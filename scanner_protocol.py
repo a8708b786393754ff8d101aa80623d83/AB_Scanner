@@ -3,6 +3,7 @@ import requests
 
 from scapy.layers.inet import TCP, IP, UDP, ICMP
 from scapy.sendrecv import sr
+from scapy.packet import Packet
 
 ports_tcp = []
 ports_udp = []
@@ -28,12 +29,12 @@ def set_protocole_name()-> None:
             name_port.append(element[1]['name'])
 
 
-def state(ans, port: int)-> None:
+def state(ans: Packet, port: int)-> None:
     """Regarde le status des paquets de reponse, elle peut determinée les status 
     de paquet de TCP/SYN, ICMP noel est UDP
 
     Args:
-        ans (_type_): liste de paquet de reponse 
+        ans (Packet): liste de paquet de reponse 
         port (int): port
     """
 
