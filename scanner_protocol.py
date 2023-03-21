@@ -74,7 +74,7 @@ def scan_syn(target: str, all_port: bool = True):
     for port in ports_tcp:
         port = int(port)
 
-        if  not all_port and port == 1023:
+        if  not all_port and port > 1023:
             return None 
             
         pkt[TCP].dport = port
@@ -88,7 +88,7 @@ def scan_udp(target: str, all_port: bool = True):
     for port in ports_udp:
         port = int(port)
 
-        if not all_port and port == 1023:
+        if not all_port and port > 1023:
             return None 
 
         pkt[UDP].dport = port
