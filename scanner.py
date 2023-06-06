@@ -20,12 +20,12 @@ start = time.time()
 set_protocole_name()  # NOTE met en place les numero des port tcp udp
 
 
-def start_scan(type_scan: str, target: str):
+def start_scan(type_scan: str, target: str, ports: bool = False):
     match type_scan:
         case 'icmp': scan_icmp(target)
         case 'arp':  scan_arp(target)
-        case 'syn':  scan_syn(target, False)
-        case 'udp':  scan_udp(target, False)
+        case 'syn':  scan_syn(target, ports)
+        case 'udp':  scan_udp(target, ports)
 
 
 if len(sys.argv) == 2:
@@ -51,15 +51,10 @@ elif len(sys.argv) > 2:
         if '/' in TARGET:
             for ip in ipaddress.ip_network(TARGET, False).hosts():
                 ip = str(ip)
-                start_scan(ip)
-                match arg:
-                    case 'icmp': scan_icmp(ip)
-                    case 'arp':  scan_arp(ip)
-                    case 'syn':  scan_syn(ip, False)
-                    case 'udp':  scan_udp(ip, False)
+                start_scan(ip, False)
 
         else:
-            start_scan(TARGET)
+            start_scan(TARGET, False) # NOTE j'ai laisser expres, pour me rappeller qu'il faut l'implimentais
 
 
 print(time.time() - start)
